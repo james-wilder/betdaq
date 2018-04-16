@@ -158,6 +158,39 @@ func (c *Client) GetMarketInformation(id int64) (*GetMarketInformationResponse, 
 	return &response, nil
 }
 
+func (c *Client) GetPrices(id int64) (*GetPricesResponse, error) {
+	fmt.Println("GetPrices")
+
+	var (
+		request = GetPrices{
+			GetPricesRequest: GetPricesRequest{
+				MarketIds:                    []int64{id},
+				ThresholdAmount:              "0",
+				NumberAgainstPricesRequired:  3,
+				NumberForPricesRequired:      3,
+				WantMarketMatchedAmount:      true,
+				WantSelectionMatchedDetails:  true,
+				WantSelectionsMatchedAmounts: true,
+			},
+		}
+		response GetPricesResponse
+	)
+
+	err := c.doRequest(request, &response, readOnlyService)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.GetPricesResult.ReturnStatus[0].Code != 0 {
+		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
+			response.GetPricesResult.ReturnStatus[0].Code,
+			response.GetPricesResult.ReturnStatus[0].Description,
+			response.GetPricesResult.ReturnStatus[0].ExtraInformation)
+	}
+
+	return &response, nil
+}
+
 func (c *Client) doRequest(request, response interface{}, url string) error {
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)
 	fmt.Println(string(soapRequest))
@@ -183,6 +216,7 @@ func (c *Client) doRequest(request, response interface{}, url string) error {
 		fmt.Println(err)
 		return err
 	}
+	fmt.Println(string(body))
 
 	err = soap.Decode(body, &response)
 	if err != nil {

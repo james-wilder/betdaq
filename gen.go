@@ -245,11 +245,12 @@ func buildStructFromElementByName(parsed Wsdl, name string) {
 		}
 		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 	}
-	betdaqAttributes = append(betdaqAttributes, &BetdaqAttribute{
+	namespaceAttribute := &BetdaqAttribute{
 		Name: "XMLName",
 		Type: "struct{}",
 		Xml:  " `xml:\"http://www.GlobalBettingExchange.com/ExternalAPI/ " + name + "\"`",
-	})
+	}
+	betdaqAttributes = append([]*BetdaqAttribute{namespaceAttribute}, betdaqAttributes...)
 
 	betdaqStruct := BetdaqStruct{
 		Name:       name,
@@ -267,7 +268,7 @@ func buildStructFromElement(parsed Wsdl, name string, element XsElement) {
 	for _, el := range element.ComplexType.XsSequence.XsElements {
 		newName := mapType(el.Type)
 		if newName == "" {
-			newName = name + "_" + el.Name
+			newName = name + el.Name
 			buildStructFromElement(parsed, newName, *el)
 		}
 
@@ -351,7 +352,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		for _, el := range typ.XsSequence.XsElements {
 			var attrType = mapType(el.Type)
 			if attrType == "" {
-				attrType = name + "_" + el.Name
+				attrType = name + el.Name
 				buildStructFromElement(parsed, attrType, *el)
 			}
 
@@ -370,7 +371,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		for _, el := range typ.XsComplexContent.XsExtension.XsSequence.XsElements {
 			var attrType = mapType(el.Type)
 			if attrType == "" {
-				attrType = name + "_" + el.Name
+				attrType = name + el.Name
 				buildStructFromElement(parsed, attrType, *el)
 			}
 

@@ -22,7 +22,8 @@ func main() {
 	//testGetAccountBalances(client)
 	//testGetTopLevelEvents(client)
 	//testGetEventSubTreeNoSelections(client, 100004) // Horse Racing
-	testGetMarketInformation(client, 12196309)
+	//testGetMarketInformation(client, 12196309)
+	testGetPrices(client, 12196309)
 }
 
 func testGetOddsLadder(client *api.Client) {
@@ -88,6 +89,21 @@ func testGetMarketInformation(client *api.Client, id int64) {
 		fmt.Println(market.Id, market.Name, market.Type, market.Status, market.StartTime)
 		for _, selection := range market.Selections {
 			fmt.Println("  ", selection.Id, selection.Name, selection.Status)
+		}
+	}
+}
+
+func testGetPrices(client *api.Client, id int64) {
+	getPrices, err := client.GetPrices(id)
+	if err != nil {
+		log.Fatal(err)
+		panic("Couldn't do GetMarketInformation")
+	}
+
+	for _, market := range getPrices.GetPricesResult.MarketPrices {
+		fmt.Println(market.Id, market.Name, market.Type, market.Status, market.StartTime)
+		for _, selection := range market.Selections {
+			fmt.Println("  ", selection.Id, selection.Name, selection.Status, selection.LastMatchedPrice)
 		}
 	}
 }
