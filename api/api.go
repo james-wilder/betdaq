@@ -78,6 +78,31 @@ func (c *Client) GetAccountBalances(format int64) (*GetAccountBalancesResponse, 
 	return &response, nil
 }
 
+func (c *Client) GetTopLevelEvents() (*ListTopLevelEventsResponse, error) {
+	fmt.Println("GetTopLevelEvents")
+
+	var (
+		request = ListTopLevelEvents{
+			ListTopLevelEventsRequest: ListTopLevelEventsRequest{},
+		}
+		response ListTopLevelEventsResponse
+	)
+
+	err := c.doRequest(request, &response, readOnlyService)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.ListTopLevelEventsResult.ReturnStatus[0].Code != 0 {
+		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
+			response.ListTopLevelEventsResult.ReturnStatus[0].Code,
+			response.ListTopLevelEventsResult.ReturnStatus[0].Description,
+			response.ListTopLevelEventsResult.ReturnStatus[0].ExtraInformation)
+	}
+
+	return &response, nil
+}
+
 func (c *Client) doRequest(request, response interface{}, url string) error {
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)
 	fmt.Println(string(soapRequest))
