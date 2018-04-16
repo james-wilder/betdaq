@@ -103,7 +103,13 @@ func testGetPrices(client *api.Client, id int64) {
 	for _, market := range getPrices.GetPricesResult.MarketPrices {
 		fmt.Println(market.Id, market.Name, market.Type, market.Status, market.StartTime)
 		for _, selection := range market.Selections {
-			fmt.Println("  ", selection.Id, selection.Name, selection.Status, selection.LastMatchedPrice)
+			fmt.Println("  ", selection.Id, selection.Name, selection.Status)
+			for _, price := range selection.AgainstSidePrices {
+				fmt.Println("    Against", price.Price, price.Stake)
+			}
+			for _, price := range selection.ForSidePrices {
+				fmt.Println("    For", price.Price, price.Stake)
+			}
 		}
 	}
 }
