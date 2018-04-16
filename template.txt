@@ -22,10 +22,12 @@ type {{.Name}} struct {
         {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} {{with (index $attributeTypeMap .XsSimpleType.XsRestriction.Base)}}{{.}}{{end}} // sequence element
     {{- end}}
     {{range .XsAttributes}}
+        // {{.XsAnnotation.XsDocumentation}}
         {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} `xml:",attr"`
     {{- end}}
     {{- if .XsComplexContent.XsExtension.Base}}
         {{range .XsComplexContent.XsExtension.XsAttributes}}
+            // {{.XsAnnotation.XsDocumentation}}
             {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} `xml:",attr"`
         {{- end}}
     {{- end}}

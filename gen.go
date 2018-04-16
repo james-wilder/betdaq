@@ -47,9 +47,14 @@ type XsExtension struct {
 }
 
 type XsAttribute struct {
-	Name string `xml:"name,attr"`
-	Type string `xml:"type,attr"`
-	Use  string `xml:"use,attr"`
+	Name         string       `xml:"name,attr"`
+	Type         string       `xml:"type,attr"`
+	Use          string       `xml:"use,attr"`
+	XsAnnotation XsAnnotation `xml:"http://www.w3.org/2001/XMLSchema annotation"`
+}
+
+type XsAnnotation struct {
+	XsDocumentation string `xml:"http://www.w3.org/2001/XMLSchema documentation"`
 }
 
 type XsElement struct {
@@ -189,6 +194,10 @@ func main() {
 		ElementMap:       elementMap,
 	})
 	die(err)
+
+	for _, service := range parsed.Services {
+		fmt.Println(service.Name, service.Port.SoapAddress.Location)
+	}
 }
 
 func die(err error) {
