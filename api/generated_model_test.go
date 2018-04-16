@@ -9,7 +9,7 @@ import (
 
 func TestEncode(t *testing.T) {
 	req := &GetPrices{
-		GetPricesRequest: GetPricesRequest{
+		getPricesRequest: GetPricesRequest{
 			ThresholdAmount:             0,
 			NumberForPricesRequired:     -1,
 			NumberAgainstPricesRequired: -1,
@@ -40,7 +40,7 @@ func TestDecode(t *testing.T) {
 		if resp.GetOddsLadderResult.ReturnStatus.CallId != "26091ffa-e9e7-437a-aaf5-6e690bc3e33a" {
 			t.Fail()
 		}
-		fmt.Println("Ladders:", len(resp.GetOddsLadderResult.Prices))
+		fmt.Println("Ladders:", len(resp.GetOddsLadderResult))
 		if len(resp.GetOddsLadderResult.Prices) != 495 {
 			t.Fail()
 		}

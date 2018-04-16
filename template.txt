@@ -3,38 +3,19 @@
 // {{ .Timestamp }}
 package api
 
-{{$serviceMap := .ServiceMap}}
-{{$messageMap := .MessageMap}}
-{{$complexTypeMap := .ComplexTypeMap}}
-{{$attributeTypeMap := .AttributeTypeMap}}
-{{$elementMap := .ElementMap}}
-
-{{range .Wsdl.Services }}
-var {{ .Name }} = {{ printf "%q" .Port.SoapAddress.Location }}
-{{end }}
-
-{{range .Wsdl.Types.XsSchema.ComplexTypes}}
-type {{.Name}} struct {
-    {{- if .XsComplexContent.XsExtension.Base}}
-        *{{.XsComplexContent.XsExtension.Base}}
-    {{- end}}
-    {{range .XsSequence.XsSequenceElements}}
-        {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} {{with (index $attributeTypeMap .XsSimpleType.XsRestriction.Base)}}{{.}}{{end}} // sequence element
-    {{- end}}
-    {{range .XsAttributes}}
-        // {{.XsAnnotation.XsDocumentation}}
-        {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} `xml:",attr"`
-    {{- end}}
-    {{- if .XsComplexContent.XsExtension.Base}}
-        {{range .XsComplexContent.XsExtension.XsAttributes}}
-            // {{.XsAnnotation.XsDocumentation}}
-            {{.Name}} {{with (index $attributeTypeMap .Type)}}{{.}}{{end}} `xml:",attr"`
-        {{- end}}
-    {{- end}}
-    {{with (index $elementMap .Name)}}
-        {{range .ComplexType.XsSequence.XsSequenceElements}}
-            {{.Name}} {{.Type}}
-        {{end}}
+{{range .BetdaqStructs }}
+type {{ .Name }} struct {
+{{range .Attributes}}
+    {{- if .Comment}}
+    {{if .CommentMultiLine}}
+    /*
+     {{.Comment}}
+     */
+    {{- else -}}
+    // {{.Comment}}
+    {{- end -}}
     {{end}}
+    {{.Name}} {{.Type}} {{.Xml}}
+{{- end}}
 }
-{{end}}
+{{end }}

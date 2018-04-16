@@ -7,11 +7,27 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"text/template"
 	"time"
 )
 
 //go:generate go run gen.go
+
+var codeTemplate = template.Must(template.ParseFiles("template.txt"))
+
+var attributeTypeMap = map[string]string{
+	"xs:boolean":      "bool",
+	"xs:short":        "int64",
+	"xs:long":         "int64",
+	"xs:decimal":      "int64",
+	"xs:int":          "int64",
+	"xs:unsignedByte": "int64",
+	"xs:string":       "string",
+	"xs:dateTime":     "string",
+}
+
+var betdaqStructs []*BetdaqStruct
 
 type Wsdl struct {
 	XMLName   struct{}        `xml:"http://schemas.xmlsoap.org/wsdl/ definitions"`
@@ -44,6 +60,7 @@ type XsComplexContent struct {
 type XsExtension struct {
 	XsAttributes []*XsAttribute `xml:"http://www.w3.org/2001/XMLSchema attribute"`
 	Base         string         `xml:"base,attr"`
+	XsSequence   XsSequence     `xml:"http://www.w3.org/2001/XMLSchema sequence"`
 }
 
 type XsAttribute struct {
@@ -99,9 +116,10 @@ type WsdlPortType struct {
 }
 
 type WsdlOperation struct {
-	Name   string     `xml:"name,attr"`
-	Input  WsdlInput  `xml:"http://schemas.xmlsoap.org/wsdl/ input"`
-	Output WsdlOutput `xml:"http://schemas.xmlsoap.org/wsdl/ output"`
+	Name            string     `xml:"name,attr"`
+	Input           WsdlInput  `xml:"http://schemas.xmlsoap.org/wsdl/ input"`
+	Output          WsdlOutput `xml:"http://schemas.xmlsoap.org/wsdl/ output"`
+	XsDocumentation string     `xml:"http://www.w3.org/2001/XMLSchema documentation"`
 }
 
 type WsdlInput struct {
@@ -122,6 +140,19 @@ type WsdlPart struct {
 	Element string `xml:"element,attr"`
 }
 
+type BetdaqStruct struct {
+	Name       string
+	Attributes []*BetdaqAttribute
+}
+
+type BetdaqAttribute struct {
+	Name             string
+	Type             string
+	Xml              string
+	Comment          string
+	CommentMultiLine bool
+}
+
 func main() {
 	wsdl, err := ioutil.ReadFile("api/betdaq-api.wsdl")
 	die(err)
@@ -140,64 +171,45 @@ func main() {
 		serviceMap[service.Name] = service
 	}
 
-	var messageMap = make(map[string]*WsdlMessage)
-	for _, message := range parsed.Messages {
-		fmt.Println("Message", message.Name)
-		messageMap[message.Name] = message
-	}
-
-	var elementMap = make(map[string]*XsElement)
-	for _, element := range parsed.Types.XsSchema.Elements {
-		fmt.Println("Element", element.Name)
-		elementMap[element.Name] = element
-	}
-
-	var complexTypeMap = make(map[string]*XsComplexType)
-	for _, typ := range parsed.Types.XsSchema.ComplexTypes {
-		fmt.Println("ComplexType", typ.Name)
-		complexTypeMap[typ.Name] = typ
-	}
-
 	sort.Slice(parsed.Types.XsSchema.ComplexTypes, func(i, j int) bool {
 		return parsed.Types.XsSchema.ComplexTypes[i].Name < parsed.Types.XsSchema.ComplexTypes[j].Name
 	})
 
-	var attributeTypeMap = map[string]string{
-		"xs:boolean":      "bool",
-		"xs:short":        "int64",
-		"xs:long":         "int64",
-		"xs:decimal":      "int64",
-		"xs:int":          "int64",
-		"xs:unsignedByte": "int64",
-		"xs:string":       "string",
-		"xs:dateTime":     "string",
-	}
-	for _, typ := range parsed.Types.XsSchema.ComplexTypes {
-		attributeTypeMap[typ.Name] = typ.Name
+	for _, p := range parsed.PortTypes {
+		fmt.Println(p.Name)
+		for _, o := range p.Operations {
+			fmt.Println("  ", o.Name)
+			if o.XsDocumentation != "" {
+				fmt.Println("    ", o.XsDocumentation)
+			}
+
+			fmt.Println("    ", o.Input.Message)
+			inputMessage := getMessage(parsed, o.Input.Message)
+			for _, part := range inputMessage.Parts {
+				fmt.Println("      ", part.Name, part.Element)
+				buildStructFromElement(parsed, part.Element)
+			}
+
+			fmt.Println("    ", o.Output.Message)
+			outputMessage := getMessage(parsed, o.Output.Message)
+			for _, part := range outputMessage.Parts {
+				fmt.Println("      ", part.Name, part.Element)
+				buildStructFromElement(parsed, part.Element)
+			}
+			fmt.Println()
+		}
 	}
 
-	err = packageTemplate.Execute(f, struct {
-		Timestamp        time.Time
-		Wsdl             Wsdl
-		ServiceMap       map[string]*WsdlService
-		MessageMap       map[string]*WsdlMessage
-		ComplexTypeMap   map[string]*XsComplexType
-		AttributeTypeMap map[string]string
-		ElementMap       map[string]*XsElement
+	err = codeTemplate.Execute(f, struct {
+		Timestamp     time.Time
+		ServiceMap    map[string]*WsdlService
+		BetdaqStructs []*BetdaqStruct
 	}{
-		Timestamp:        time.Now(),
-		Wsdl:             parsed,
-		ServiceMap:       serviceMap,
-		MessageMap:       messageMap,
-		ComplexTypeMap:   complexTypeMap,
-		AttributeTypeMap: attributeTypeMap,
-		ElementMap:       elementMap,
+		Timestamp:     time.Now(),
+		ServiceMap:    serviceMap,
+		BetdaqStructs: betdaqStructs,
 	})
 	die(err)
-
-	for _, service := range parsed.Services {
-		fmt.Println(service.Name, service.Port.SoapAddress.Location)
-	}
 }
 
 func die(err error) {
@@ -207,4 +219,124 @@ func die(err error) {
 	}
 }
 
-var packageTemplate = template.Must(template.ParseFiles("template.txt"))
+func mapType(wsdlType string) string {
+	typ, found := attributeTypeMap[wsdlType]
+	if found {
+		return typ
+	}
+	return wsdlType
+}
+
+func buildStructFromElement(parsed Wsdl, name string) {
+	fmt.Println("buildStructFromElement", name)
+
+	var betdaqAttributes []*BetdaqAttribute
+	element, found := getElement(parsed, name)
+	if found {
+		fmt.Println("Element found for", name)
+
+		for _, attr := range element.ComplexType.XsSequence.XsSequenceElements {
+			var newName = attr.Type
+			if attr.Type == name {
+				newName = attr.Name
+			}
+
+			buildStructFromType(parsed, newName)
+
+			betdaqAttribute := BetdaqAttribute{
+				Name: attr.Name,
+				Type: newName,
+			}
+			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+		}
+	} else {
+		fmt.Println("Element not found for", name)
+	}
+	betdaqStruct := BetdaqStruct{
+		Name:       name,
+		Attributes: betdaqAttributes,
+	}
+	betdaqStructs = append(betdaqStructs, &betdaqStruct)
+}
+
+func buildStructFromType(parsed Wsdl, name string) {
+	fmt.Println("buildStructFromElement", name)
+
+	var betdaqAttributes []*BetdaqAttribute
+	betdaqStruct := BetdaqStruct{
+		Name:       name,
+		Attributes: betdaqAttributes,
+	}
+	betdaqStructs = append(betdaqStructs, &betdaqStruct)
+}
+
+func complexTypeToBetdaqType(typ *XsComplexType) *BetdaqStruct {
+	var betdaqAttributes []*BetdaqAttribute
+	for _, attr := range typ.XsAttributes {
+		betdaqAttribute := BetdaqAttribute{
+			Name:             attr.Name,
+			Type:             mapType(attr.Type),
+			Comment:          attr.XsAnnotation.XsDocumentation,
+			CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+		}
+		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+	}
+	if typ.XsComplexContent.XsExtension.Base != "" {
+		betdaqAttribute := BetdaqAttribute{
+			Name: "*" + typ.XsComplexContent.XsExtension.Base,
+		}
+		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+	}
+	for _, attr := range typ.XsComplexContent.XsExtension.XsAttributes {
+		betdaqAttribute := BetdaqAttribute{
+			Name:             attr.Name,
+			Type:             mapType(attr.Type),
+			Comment:          attr.XsAnnotation.XsDocumentation,
+			CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+		}
+		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+	}
+	for _, attr := range typ.XsComplexContent.XsExtension.XsSequence.XsSequenceElements {
+		if attr.Type == "" {
+			fmt.Println("Broken", attr.Name)
+		} else {
+			betdaqAttribute := BetdaqAttribute{
+				Name: attr.Name,
+				Type: "[]" + mapType(attr.Type),
+			}
+			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+		}
+	}
+
+	return &BetdaqStruct{
+		Name:       typ.Name,
+		Attributes: betdaqAttributes,
+	}
+}
+
+func getBetdaqStructByName(betdaqStructs []*BetdaqStruct, name string) (*BetdaqStruct, bool) {
+	for _, betdaqStruct := range betdaqStructs {
+		if betdaqStruct.Name == name {
+			return betdaqStruct, true
+		}
+	}
+	return nil, false
+}
+
+func getMessage(parsed Wsdl, name string) *WsdlMessage {
+	for _, message := range parsed.Messages {
+		if message.Name == name {
+			return message
+		}
+	}
+	panic("uh-oh")
+}
+
+func getElement(parsed Wsdl, name string) (*XsElement, bool) {
+	for _, element := range parsed.Types.XsSchema.Elements {
+		if element.Name == name {
+			return element, true
+		}
+	}
+	return nil, false
+}
