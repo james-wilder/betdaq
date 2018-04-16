@@ -75,18 +75,14 @@ type XsAnnotation struct {
 }
 
 type XsElement struct {
-	Name        string        `xml:"name,attr"`
-	ComplexType XsComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
+	Name         string        `xml:"name,attr"`
+	ComplexType  XsComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
+	Type         string        `xml:"type,attr"`
+	XsSimpleType XsSimpleType  `xml:"http://www.w3.org/2001/XMLSchema simpleType"`
 }
 
 type XsSequence struct {
-	XsSequenceElements []*XsSequenceElement `xml:"http://www.w3.org/2001/XMLSchema element"`
-}
-
-type XsSequenceElement struct {
-	Name         string       `xml:"name,attr"`
-	Type         string       `xml:"type,attr"`
-	XsSimpleType XsSimpleType `xml:"http://www.w3.org/2001/XMLSchema simpleType"`
+	XsElements []*XsElement `xml:"http://www.w3.org/2001/XMLSchema element"`
 }
 
 type XsSimpleType struct {
@@ -187,14 +183,14 @@ func main() {
 			inputMessage := getMessage(parsed, o.Input.Message)
 			for _, part := range inputMessage.Parts {
 				fmt.Println("      ", part.Name, part.Element)
-				buildStructFromElement(parsed, part.Element)
+				buildStructFromElementByName(parsed, part.Element)
 			}
 
 			fmt.Println("    ", o.Output.Message)
 			outputMessage := getMessage(parsed, o.Output.Message)
 			for _, part := range outputMessage.Parts {
 				fmt.Println("      ", part.Name, part.Element)
-				buildStructFromElement(parsed, part.Element)
+				buildStructFromElementByName(parsed, part.Element)
 			}
 			fmt.Println()
 		}
@@ -227,14 +223,14 @@ func mapType(wsdlType string) string {
 	return wsdlType
 }
 
-func buildStructFromElement(parsed Wsdl, name string) {
+func buildStructFromElementByName(parsed Wsdl, name string) {
 	//fmt.Println("buildStructFromElement", name)
 
 	var betdaqAttributes []*BetdaqAttribute
 	element := getElement(parsed, name)
 	//fmt.Println("Element found for", name)
 
-	for _, attr := range element.ComplexType.XsSequence.XsSequenceElements {
+	for _, attr := range element.ComplexType.XsSequence.XsElements {
 		var newName = attr.Type
 		if attr.Type == name {
 			newName = attr.Name
@@ -255,10 +251,52 @@ func buildStructFromElement(parsed Wsdl, name string) {
 	betdaqStructs = append(betdaqStructs, &betdaqStruct)
 }
 
+func buildStructFromElement(parsed Wsdl, name string, element XsElement) {
+	//fmt.Println("buildStructFromElement", name)
+
+	var betdaqAttributes []*BetdaqAttribute
+	//fmt.Println("Element found for", name)
+
+	for _, el := range element.ComplexType.XsSequence.XsElements {
+		newName := mapType(el.Type)
+		if newName == "" {
+			newName = name + "_" + el.Name
+			buildStructFromElement(parsed, newName, *el)
+		}
+
+		buildStructFromComplexType(parsed, newName, name)
+
+		betdaqAttribute := BetdaqAttribute{
+			Name: el.Name,
+			Type: "[]" + newName,
+		}
+		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+	}
+	betdaqStruct := BetdaqStruct{
+		Name:       name,
+		Attributes: betdaqAttributes,
+	}
+	betdaqStructs = append(betdaqStructs, &betdaqStruct)
+}
+
 func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName string) {
 	fmt.Println("buildStructFromComplexType", name)
 
+	// TODO: do this better
+	if name == "" || name == "int64" || name == "string" {
+		return
+	}
+
 	var betdaqAttributes []*BetdaqAttribute
+
+	_, found := attributeTypeMap[name]
+	if found {
+		return
+	}
+	_, baseFound := getBetdaqStructByName(name)
+	if baseFound {
+		return
+	}
 
 	typ, found := getComplexType(parsed, usingDataFromName)
 	if !found {
@@ -301,37 +339,37 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		}
 
 		// sequence attributes
-		for _, el := range typ.XsSequence.XsSequenceElements {
+		for _, el := range typ.XsSequence.XsElements {
+			var attrType = mapType(el.Type)
+			if attrType == "" {
+				attrType = name + "_" + el.Name
+				buildStructFromElement(parsed, attrType, *el)
+			}
+
 			betdaqAttribute := BetdaqAttribute{
 				Name: el.Name,
-				Type: "[]" + mapType(el.Type),
+				Type: "[]" + attrType,
 			}
-			_, found := attributeTypeMap[el.Type]
-			if !found {
-				_, baseFound := getBetdaqStructByName(el.Type)
-				if !baseFound {
-					if el.Type != name {
-						buildStructFromComplexType(parsed, el.Type, el.Type)
-					}
-				}
+			if el.Type != name {
+				buildStructFromComplexType(parsed, el.Type, el.Type)
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
 
 		// extension attributes
-		for _, el := range typ.XsComplexContent.XsExtension.XsSequence.XsSequenceElements {
+		for _, el := range typ.XsComplexContent.XsExtension.XsSequence.XsElements {
+			var attrType = mapType(el.Type)
+			if attrType == "" {
+				attrType = name + "_" + el.Name
+				buildStructFromElement(parsed, attrType, *el)
+			}
+
 			betdaqAttribute := BetdaqAttribute{
 				Name: el.Name,
-				Type: "[]" + mapType(el.Type),
+				Type: "[]" + attrType,
 			}
-			_, found := attributeTypeMap[el.Type]
-			if !found {
-				_, baseFound := getBetdaqStructByName(el.Type)
-				if !baseFound {
-					if el.Type != name {
-						buildStructFromComplexType(parsed, el.Type, el.Type)
-					}
-				}
+			if el.Type != name {
+				buildStructFromComplexType(parsed, el.Type, el.Type)
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
