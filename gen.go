@@ -228,30 +228,97 @@ func mapType(wsdlType string) string {
 }
 
 func buildStructFromElement(parsed Wsdl, name string) {
-	fmt.Println("buildStructFromElement", name)
+	//fmt.Println("buildStructFromElement", name)
 
 	var betdaqAttributes []*BetdaqAttribute
-	element, found := getElement(parsed, name)
-	if found {
-		fmt.Println("Element found for", name)
+	element := getElement(parsed, name)
+	//fmt.Println("Element found for", name)
 
-		for _, attr := range element.ComplexType.XsSequence.XsSequenceElements {
-			var newName = attr.Type
-			if attr.Type == name {
-				newName = attr.Name
+	for _, attr := range element.ComplexType.XsSequence.XsSequenceElements {
+		var newName = attr.Type
+		if attr.Type == name {
+			newName = attr.Name
+		}
+
+		buildStructFromType(parsed, newName, name)
+
+		betdaqAttribute := BetdaqAttribute{
+			Name: attr.Name,
+			Type: newName,
+		}
+		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+	}
+	betdaqStruct := BetdaqStruct{
+		Name:       name,
+		Attributes: betdaqAttributes,
+	}
+	betdaqStructs = append(betdaqStructs, &betdaqStruct)
+}
+
+func buildStructFromType(parsed Wsdl, name string, usingDataFromName string) {
+	//fmt.Println("buildStructFromType", name)
+
+	var betdaqAttributes []*BetdaqAttribute
+
+	typ, found := getComplexType(parsed, usingDataFromName)
+	if !found {
+		typ, found = getComplexType(parsed, name)
+	}
+	if found {
+		// base class
+		if typ.XsComplexContent.XsExtension.Base != "" {
+			_, baseFound := getBetdaqStructByName(typ.XsComplexContent.XsExtension.Base)
+			if !baseFound {
+				buildStructFromType(parsed, typ.XsComplexContent.XsExtension.Base, typ.XsComplexContent.XsExtension.Base)
 			}
 
-			buildStructFromType(parsed, newName)
-
 			betdaqAttribute := BetdaqAttribute{
-				Name: attr.Name,
-				Type: newName,
+				Name: "*" + typ.XsComplexContent.XsExtension.Base,
+			}
+			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+		}
+
+		// simple attributes
+		for _, attr := range typ.XsAttributes {
+			betdaqAttribute := BetdaqAttribute{
+				Name:             attr.Name,
+				Type:             mapType(attr.Type),
+				Comment:          attr.XsAnnotation.XsDocumentation,
+				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+			}
+			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+		}
+
+		// extension attributes
+		for _, attr := range typ.XsComplexContent.XsExtension.XsAttributes {
+			betdaqAttribute := BetdaqAttribute{
+				Name:             attr.Name,
+				Type:             mapType(attr.Type),
+				Comment:          attr.XsAnnotation.XsDocumentation,
+				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+			}
+			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
+		}
+
+		// extension attributes
+		for _, el := range typ.XsSequence.XsSequenceElements {
+			betdaqAttribute := BetdaqAttribute{
+				Name: el.Name,
+				Type: mapType(el.Type),
+			}
+			_, found := attributeTypeMap[el.Type]
+			if !found {
+				_, baseFound := getBetdaqStructByName(el.Type)
+				if !baseFound {
+					buildStructFromType(parsed, el.Type, el.Type)
+				}
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
 	} else {
-		fmt.Println("Element not found for", name)
+		fmt.Println("getComplexType not found", name)
 	}
+
 	betdaqStruct := BetdaqStruct{
 		Name:       name,
 		Attributes: betdaqAttributes,
@@ -259,62 +326,7 @@ func buildStructFromElement(parsed Wsdl, name string) {
 	betdaqStructs = append(betdaqStructs, &betdaqStruct)
 }
 
-func buildStructFromType(parsed Wsdl, name string) {
-	fmt.Println("buildStructFromElement", name)
-
-	var betdaqAttributes []*BetdaqAttribute
-	betdaqStruct := BetdaqStruct{
-		Name:       name,
-		Attributes: betdaqAttributes,
-	}
-	betdaqStructs = append(betdaqStructs, &betdaqStruct)
-}
-
-func complexTypeToBetdaqType(typ *XsComplexType) *BetdaqStruct {
-	var betdaqAttributes []*BetdaqAttribute
-	for _, attr := range typ.XsAttributes {
-		betdaqAttribute := BetdaqAttribute{
-			Name:             attr.Name,
-			Type:             mapType(attr.Type),
-			Comment:          attr.XsAnnotation.XsDocumentation,
-			CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
-		}
-		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
-	}
-	if typ.XsComplexContent.XsExtension.Base != "" {
-		betdaqAttribute := BetdaqAttribute{
-			Name: "*" + typ.XsComplexContent.XsExtension.Base,
-		}
-		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
-	}
-	for _, attr := range typ.XsComplexContent.XsExtension.XsAttributes {
-		betdaqAttribute := BetdaqAttribute{
-			Name:             attr.Name,
-			Type:             mapType(attr.Type),
-			Comment:          attr.XsAnnotation.XsDocumentation,
-			CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
-		}
-		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
-	}
-	for _, attr := range typ.XsComplexContent.XsExtension.XsSequence.XsSequenceElements {
-		if attr.Type == "" {
-			fmt.Println("Broken", attr.Name)
-		} else {
-			betdaqAttribute := BetdaqAttribute{
-				Name: attr.Name,
-				Type: "[]" + mapType(attr.Type),
-			}
-			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
-		}
-	}
-
-	return &BetdaqStruct{
-		Name:       typ.Name,
-		Attributes: betdaqAttributes,
-	}
-}
-
-func getBetdaqStructByName(betdaqStructs []*BetdaqStruct, name string) (*BetdaqStruct, bool) {
+func getBetdaqStructByName(name string) (*BetdaqStruct, bool) {
 	for _, betdaqStruct := range betdaqStructs {
 		if betdaqStruct.Name == name {
 			return betdaqStruct, true
@@ -329,13 +341,22 @@ func getMessage(parsed Wsdl, name string) *WsdlMessage {
 			return message
 		}
 	}
-	panic("uh-oh")
+	panic("uh-oh getMessage")
 }
 
-func getElement(parsed Wsdl, name string) (*XsElement, bool) {
+func getElement(parsed Wsdl, name string) *XsElement {
 	for _, element := range parsed.Types.XsSchema.Elements {
 		if element.Name == name {
-			return element, true
+			return element
+		}
+	}
+	panic("uh-oh getElement")
+}
+
+func getComplexType(parsed Wsdl, name string) (*XsComplexType, bool) {
+	for _, ct := range parsed.Types.XsSchema.ComplexTypes {
+		if ct.Name == name {
+			return ct, true
 		}
 	}
 	return nil, false

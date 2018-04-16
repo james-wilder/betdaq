@@ -13,7 +13,7 @@ func TestEncode(t *testing.T) {
 			ThresholdAmount:             0,
 			NumberForPricesRequired:     -1,
 			NumberAgainstPricesRequired: -1,
-			MarketIds:                   "483492",
+			MarketIds:                   483492,
 		},
 	}
 	data, err := soap.Encode(&req, "username", "xxx")
