@@ -103,6 +103,61 @@ func (c *Client) GetTopLevelEvents() (*ListTopLevelEventsResponse, error) {
 	return &response, nil
 }
 
+func (c *Client) GetEventSubTreeNoSelections(id int64) (*GetEventSubTreeNoSelectionsResponse, error) {
+	fmt.Println("GetEventSubTreeNoSelections")
+
+	var (
+		request = GetEventSubTreeNoSelections{
+			GetEventSubTreeNoSelectionsRequest: GetEventSubTreeNoSelectionsRequest{
+				WantDirectDescendentsOnly: false,
+				EventClassifierIds:        []int64{id},
+			},
+		}
+		response GetEventSubTreeNoSelectionsResponse
+	)
+
+	err := c.doRequest(request, &response, readOnlyService)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.GetEventSubTreeNoSelectionsResult.ReturnStatus[0].Code != 0 {
+		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
+			response.GetEventSubTreeNoSelectionsResult.ReturnStatus[0].Code,
+			response.GetEventSubTreeNoSelectionsResult.ReturnStatus[0].Description,
+			response.GetEventSubTreeNoSelectionsResult.ReturnStatus[0].ExtraInformation)
+	}
+
+	return &response, nil
+}
+
+func (c *Client) GetMarketInformation(id int64) (*GetMarketInformationResponse, error) {
+	fmt.Println("GetMarketInformation")
+
+	var (
+		request = GetMarketInformation{
+			GetMarketInformationRequest: GetMarketInformationRequest{
+				MarketIds: []int64{id},
+			},
+		}
+		response GetMarketInformationResponse
+	)
+
+	err := c.doRequest(request, &response, readOnlyService)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.GetMarketInformationResult.ReturnStatus[0].Code != 0 {
+		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
+			response.GetMarketInformationResult.ReturnStatus[0].Code,
+			response.GetMarketInformationResult.ReturnStatus[0].Description,
+			response.GetMarketInformationResult.ReturnStatus[0].ExtraInformation)
+	}
+
+	return &response, nil
+}
+
 func (c *Client) doRequest(request, response interface{}, url string) error {
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)
 	fmt.Println(string(soapRequest))

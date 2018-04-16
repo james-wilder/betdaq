@@ -756,11 +756,11 @@
         <xs:attribute name="DisplayOrder" type="xs:int" use="required" />
       </xs:complexType>
       <xs:complexType name="GetMarketInformationRequest">
-        <xs:sequence>
+        <!--<xs:sequence>-->
           <xs:sequence minOccurs="1" maxOccurs="unbounded">
             <xs:element name="MarketIds" type="xs:long" />
           </xs:sequence>
-        </xs:sequence>
+        <!--</xs:sequence>-->
       </xs:complexType>
       <xs:complexType name="GetMarketInformationResponse">
         <xs:complexContent>
