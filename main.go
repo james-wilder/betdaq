@@ -23,7 +23,6 @@ func main() {
 		log.Fatal(err)
 		panic("Couldn't get the odds ladder")
 	}
-
 	for _, price := range getLadderResponse.GetOddsLadderResult.Ladder {
 		fmt.Println(price.Price, price.Representation)
 	}
@@ -33,7 +32,6 @@ func main() {
 		log.Fatal(err)
 		panic("Couldn't get the account balances")
 	}
-
 	fmt.Println(getAccountBalancesResponse.GetAccountBalancesResult.Currency)
 	fmt.Println(getAccountBalancesResponse.GetAccountBalancesResult.AvailableFunds)
 }

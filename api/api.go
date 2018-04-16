@@ -9,9 +9,10 @@ import (
 	"github.com/james-wilder/betdaq/soap"
 )
 
-const readOnlyService = "http://api.betdaq.com/v2.0/ReadOnlyService.asmx"
-const secureService = "https://api.betdaq.com/v2.0/Secure/SecureService.asmx"
-const port = 443 // HTTPS
+const (
+	readOnlyService = "http://api.betdaq.com/v2.0/ReadOnlyService.asmx"
+	secureService   = "https://api.betdaq.com/v2.0/Secure/SecureService.asmx"
+)
 
 type Client struct {
 	Username string
@@ -28,70 +29,64 @@ func NewClient(username string, password string) *Client {
 func (c *Client) GetOddsLadder(format int64) (*GetOddsLadderResponse, error) {
 	fmt.Println("GetOddsLadder")
 
-	request := GetOddsLadder{
-		GetOddsLadderRequest: GetOddsLadderRequest{
-			PriceFormat: format,
-		},
-	}
+	var (
+		request = GetOddsLadder{
+			GetOddsLadderRequest: GetOddsLadderRequest{
+				PriceFormat: format,
+			},
+		}
+		response GetOddsLadderResponse
+	)
 
-	soapRequest, err := soap.Encode(request, c.Username, c.Password)
-	fmt.Println(string(soapRequest))
+	err := c.doRequest(request, &response, readOnlyService)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", readOnlyService, bytes.NewBuffer(soapRequest))
-
-	req.Header.Add("Content-Type", "text/xml; charset=utf-8")
-
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-
-	fmt.Println("HTTP response status:", resp.Status)
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-
-	var content GetOddsLadderResponse
-	err = soap.Decode(body, &content)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-
-	if content.GetOddsLadderResult.ReturnStatus[0].Code != 0 {
+	if response.GetOddsLadderResult.ReturnStatus[0].Code != 0 {
 		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
-			content.GetOddsLadderResult.ReturnStatus[0].Code,
-			content.GetOddsLadderResult.ReturnStatus[0].Description,
-			content.GetOddsLadderResult.ReturnStatus[0].ExtraInformation)
+			response.GetOddsLadderResult.ReturnStatus[0].Code,
+			response.GetOddsLadderResult.ReturnStatus[0].Description,
+			response.GetOddsLadderResult.ReturnStatus[0].ExtraInformation)
 	}
 
-	return &content, nil
+	return &response, err
 }
 
 func (c *Client) GetAccountBalances(format int64) (*GetAccountBalancesResponse, error) {
 	fmt.Println("GetAccountBalances")
 
-	request := GetAccountBalances{
-		GetAccountBalancesRequest: GetAccountBalancesRequest{},
-	}
+	var (
+		request = GetAccountBalances{
+			GetAccountBalancesRequest: GetAccountBalancesRequest{},
+		}
+		response GetAccountBalancesResponse
+	)
 
-	soapRequest, err := soap.Encode(request, c.Username, c.Password)
+	err := c.doRequest(request, &response, secureService)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
-	fmt.Println(string(soapRequest))
+	if response.GetAccountBalancesResult.ReturnStatus[0].Code != 0 {
+		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
+			response.GetAccountBalancesResult.ReturnStatus[0].Code,
+			response.GetAccountBalancesResult.ReturnStatus[0].Description,
+			response.GetAccountBalancesResult.ReturnStatus[0].ExtraInformation)
+	}
 
-	req, err := http.NewRequest("POST", secureService, bytes.NewBuffer(soapRequest))
+	return &response, nil
+}
+
+func (c *Client) doRequest(request, response interface{}, url string) error {
+	soapRequest, err := soap.Encode(request, c.Username, c.Password)
+	fmt.Println(string(soapRequest))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(soapRequest))
 
 	req.Header.Add("Content-Type", "text/xml; charset=utf-8")
 
@@ -99,29 +94,21 @@ func (c *Client) GetAccountBalances(format int64) (*GetAccountBalancesResponse, 
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
 
 	fmt.Println("HTTP response status:", resp.Status)
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
 
-	var content GetAccountBalancesResponse
-	err = soap.Decode(body, &content)
+	err = soap.Decode(body, &response)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
 
-	if content.GetAccountBalancesResult.ReturnStatus[0].Code != 0 {
-		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
-			content.GetAccountBalancesResult.ReturnStatus[0].Code,
-			content.GetAccountBalancesResult.ReturnStatus[0].Description,
-			content.GetAccountBalancesResult.ReturnStatus[0].ExtraInformation)
-	}
-
-	return &content, nil
+	return nil
 }
