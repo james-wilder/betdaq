@@ -45,10 +45,10 @@ func TestDecode(t *testing.T) {
 			t.Fail()
 		}
 		fmt.Println("Ladders[3]:", resp.GetOddsLadderResult.Ladder[3])
-		if resp.GetOddsLadderResult.Ladder[3].price != "1.04" {
+		if resp.GetOddsLadderResult.Ladder[3].Price != "1.04" {
 			t.Fail()
 		}
-		if resp.GetOddsLadderResult.Ladder[3].representation != "1.04" {
+		if resp.GetOddsLadderResult.Ladder[3].Representation != "1.04" {
 			t.Fail()
 		}
 	})

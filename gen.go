@@ -319,10 +319,11 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		// simple attributes
 		for _, attr := range typ.XsAttributes {
 			betdaqAttribute := BetdaqAttribute{
-				Name:             attr.Name,
+				Name:             capitalize(attr.Name),
 				Type:             mapType(attr.Type),
 				Comment:          attr.XsAnnotation.XsDocumentation,
 				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+				Xml:              "`xml:\"" + attr.Name + ",attr\"`",
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
@@ -330,10 +331,11 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		// extension attributes
 		for _, attr := range typ.XsComplexContent.XsExtension.XsAttributes {
 			betdaqAttribute := BetdaqAttribute{
-				Name:             attr.Name,
+				Name:             capitalize(attr.Name),
 				Type:             mapType(attr.Type),
 				Comment:          attr.XsAnnotation.XsDocumentation,
 				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
+				Xml:              "`xml:\"" + attr.Name + ",attr\"`",
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
@@ -418,4 +420,8 @@ func getComplexType(parsed Wsdl, name string) (*XsComplexType, bool) {
 		}
 	}
 	return nil, false
+}
+
+func capitalize(s string) string {
+	return strings.Title(s)
 }

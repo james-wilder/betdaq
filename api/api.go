@@ -29,7 +29,7 @@ func (c *Client) GetOddsLadder(format int64) (*GetOddsLadderResponse, error) {
 	fmt.Println("GetOddsLadder")
 
 	request := GetOddsLadder{
-		GetOddsLadderRequest: GetOddsLadderRequest{
+		getOddsLadderRequest: GetOddsLadderRequest{
 			PriceFormat: format,
 		},
 	}
@@ -65,21 +65,21 @@ func (c *Client) GetOddsLadder(format int64) (*GetOddsLadderResponse, error) {
 		return nil, err
 	}
 
-	if content.GetOddsLadderResult.ReturnStatus.Code != 0 {
+	if content.GetOddsLadderResult.ReturnStatus[0].Code != 0 {
 		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
-			content.GetOddsLadderResult.ReturnStatus.Code,
-			content.GetOddsLadderResult.ReturnStatus.Description,
-			content.GetOddsLadderResult.ReturnStatus.ExtraInformation)
+			content.GetOddsLadderResult.ReturnStatus[0].Code,
+			content.GetOddsLadderResult.ReturnStatus[0].Description,
+			content.GetOddsLadderResult.ReturnStatus[0].ExtraInformation)
 	}
 
 	return &content, nil
 }
 
-func (c *Client) GetAccountBalances(format PriceFormat) (*GetAccountBalancesResponse, error) {
+func (c *Client) GetAccountBalances(format int64) (*GetAccountBalancesResponse, error) {
 	fmt.Println("GetAccountBalances")
 
 	request := GetAccountBalances{
-		GetAccountBalancesRequest: GetAccountBalancesRequest{},
+		getAccountBalancesRequest: GetAccountBalancesRequest{},
 	}
 
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)
@@ -115,11 +115,11 @@ func (c *Client) GetAccountBalances(format PriceFormat) (*GetAccountBalancesResp
 		return nil, err
 	}
 
-	if content.ReturnStatus.Code != 0 {
+	if content.GetAccountBalancesResult.ReturnStatus[0].Code != 0 {
 		return nil, fmt.Errorf("API returned code %d (description:\"%s\", extra information:\"%s\")",
-			content.ReturnStatus.Code,
-			content.ReturnStatus.Description,
-			content.ReturnStatus.ExtraInformation)
+			content.GetAccountBalancesResult.ReturnStatus[0].Code,
+			content.GetAccountBalancesResult.ReturnStatus[0].Description,
+			content.GetAccountBalancesResult.ReturnStatus[0].ExtraInformation)
 	}
 
 	return &content, nil
