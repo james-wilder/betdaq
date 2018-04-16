@@ -29,12 +29,13 @@ func (c *Client) GetOddsLadder(format int64) (*GetOddsLadderResponse, error) {
 	fmt.Println("GetOddsLadder")
 
 	request := GetOddsLadder{
-		getOddsLadderRequest: GetOddsLadderRequest{
+		GetOddsLadderRequest: GetOddsLadderRequest{
 			PriceFormat: format,
 		},
 	}
 
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)
+	fmt.Println(string(soapRequest))
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -79,7 +80,7 @@ func (c *Client) GetAccountBalances(format int64) (*GetAccountBalancesResponse, 
 	fmt.Println("GetAccountBalances")
 
 	request := GetAccountBalances{
-		getAccountBalancesRequest: GetAccountBalancesRequest{},
+		GetAccountBalancesRequest: GetAccountBalancesRequest{},
 	}
 
 	soapRequest, err := soap.Encode(request, c.Username, c.Password)

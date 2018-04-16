@@ -239,11 +239,18 @@ func buildStructFromElementByName(parsed Wsdl, name string) {
 		buildStructFromComplexType(parsed, newName, name)
 
 		betdaqAttribute := BetdaqAttribute{
-			Name: attr.Name,
+			Name: capitalize(attr.Name),
 			Type: newName,
+			Xml:  "`xml:\"" + attr.Name + "\"`",
 		}
 		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 	}
+	betdaqAttributes = append(betdaqAttributes, &BetdaqAttribute{
+		Name: "XMLName",
+		Type: "struct{}",
+		Xml:  " `xml:\"http://www.GlobalBettingExchange.com/ExternalAPI/ " + name + "\"`",
+	})
+
 	betdaqStruct := BetdaqStruct{
 		Name:       name,
 		Attributes: betdaqAttributes,
@@ -349,8 +356,9 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 			}
 
 			betdaqAttribute := BetdaqAttribute{
-				Name: el.Name,
+				Name: capitalize(el.Name),
 				Type: "[]" + attrType,
+				Xml:  "`xml:\"" + el.Name + "\"`",
 			}
 			if el.Type != name {
 				buildStructFromComplexType(parsed, el.Type, el.Type)
@@ -367,8 +375,9 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 			}
 
 			betdaqAttribute := BetdaqAttribute{
-				Name: el.Name,
+				Name: capitalize(el.Name),
 				Type: "[]" + attrType,
+				Xml:  "`xml:\"" + el.Name + "\"`",
 			}
 			if el.Type != name {
 				buildStructFromComplexType(parsed, el.Type, el.Type)

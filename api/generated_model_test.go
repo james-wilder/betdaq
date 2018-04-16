@@ -9,7 +9,7 @@ import (
 
 func TestEncode(t *testing.T) {
 	req := &GetPrices{
-		getPricesRequest: GetPricesRequest{
+		GetPricesRequest: GetPricesRequest{
 			ThresholdAmount:             "0",
 			NumberForPricesRequired:     -1,
 			NumberAgainstPricesRequired: -1,
@@ -36,6 +36,10 @@ func TestDecode(t *testing.T) {
 			t.Log(err)
 			t.Fail()
 		}
+		if len(resp.GetOddsLadderResult.ReturnStatus) == 0 {
+			t.Fail()
+			return
+		}
 		fmt.Println(resp.GetOddsLadderResult.ReturnStatus[0].CallId)
 		if resp.GetOddsLadderResult.ReturnStatus[0].CallId != "26091ffa-e9e7-437a-aaf5-6e690bc3e33a" {
 			t.Fail()
@@ -61,7 +65,7 @@ var expectedSoapRequest = `<?xml version="1.0" encoding="UTF-8"?>
   </Header>
   <Body xmlns="http://schemas.xmlsoap.org/soap/envelope/">
     <GetPrices xmlns="http://www.GlobalBettingExchange.com/ExternalAPI/">
-      <getPricesRequest ThresholdAmount="0" NumberForPricesRequired="-1" NumberAgainstPricesRequired="-1">
+      <getPricesRequest ThresholdAmount="0" NumberForPricesRequired="-1" NumberAgainstPricesRequired="-1" WantMarketMatchedAmount="false" WantSelectionsMatchedAmounts="false" WantSelectionMatchedDetails="false">
         <MarketIds>483492</MarketIds>
       </getPricesRequest>
     </GetPrices>
