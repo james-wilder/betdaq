@@ -10,10 +10,10 @@ import (
 func TestEncode(t *testing.T) {
 	req := &GetPrices{
 		GetPricesRequest: GetPricesRequest{
-			ThresholdAmount:             0,
+			ThresholdAmount:             "0",
 			NumberForPricesRequired:     -1,
 			NumberAgainstPricesRequired: -1,
-			MarketIds:                   "483492",
+			MarketIds:                   []int64{483492},
 		},
 	}
 	data, err := soap.Encode(&req, "username", "xxx")
@@ -36,19 +36,23 @@ func TestDecode(t *testing.T) {
 			t.Log(err)
 			t.Fail()
 		}
-		fmt.Println(resp.GetOddsLadderResult.ReturnStatus.CallId)
-		if resp.GetOddsLadderResult.ReturnStatus.CallId != "26091ffa-e9e7-437a-aaf5-6e690bc3e33a" {
+		if len(resp.GetOddsLadderResult.ReturnStatus) == 0 {
+			t.Fail()
+			return
+		}
+		fmt.Println(resp.GetOddsLadderResult.ReturnStatus[0].CallId)
+		if resp.GetOddsLadderResult.ReturnStatus[0].CallId != "26091ffa-e9e7-437a-aaf5-6e690bc3e33a" {
 			t.Fail()
 		}
-		fmt.Println("Ladders:", len(resp.GetOddsLadderResult.Prices))
-		if len(resp.GetOddsLadderResult.Prices) != 495 {
+		fmt.Println("Ladders:", len(resp.GetOddsLadderResult.Ladder))
+		if len(resp.GetOddsLadderResult.Ladder) != 495 {
 			t.Fail()
 		}
-		fmt.Println("Ladders[3]:", resp.GetOddsLadderResult.Prices[3])
-		if resp.GetOddsLadderResult.Prices[3].Price != "1.04" {
+		fmt.Println("Ladders[3]:", resp.GetOddsLadderResult.Ladder[3])
+		if resp.GetOddsLadderResult.Ladder[3].Price != "1.04" {
 			t.Fail()
 		}
-		if resp.GetOddsLadderResult.Prices[3].Representation != "1.04" {
+		if resp.GetOddsLadderResult.Ladder[3].Representation != "1.04" {
 			t.Fail()
 		}
 	})
@@ -61,7 +65,7 @@ var expectedSoapRequest = `<?xml version="1.0" encoding="UTF-8"?>
   </Header>
   <Body xmlns="http://schemas.xmlsoap.org/soap/envelope/">
     <GetPrices xmlns="http://www.GlobalBettingExchange.com/ExternalAPI/">
-      <getPricesRequest ThresholdAmount="0" NumberForPricesRequired="-1" NumberAgainstPricesRequired="-1">
+      <getPricesRequest ThresholdAmount="0" NumberForPricesRequired="-1" NumberAgainstPricesRequired="-1" WantMarketMatchedAmount="false" WantSelectionsMatchedAmounts="false" WantSelectionMatchedDetails="false">
         <MarketIds>483492</MarketIds>
       </getPricesRequest>
     </GetPrices>
