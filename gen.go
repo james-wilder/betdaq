@@ -14,7 +14,8 @@ import (
 
 //go:generate go run gen.go
 
-var codeTemplate = template.Must(template.ParseFiles("template.txt"))
+var modelTemplate = template.Must(template.ParseFiles("model_template.txt"))
+var apiTemplate = template.Must(template.ParseFiles("api_template.txt"))
 
 var attributeTypeMap = map[string]string{
 	"xs:boolean":      "bool",
@@ -28,6 +29,7 @@ var attributeTypeMap = map[string]string{
 }
 
 var betdaqStructs []*BetdaqStruct
+var functions []*Function
 
 type Wsdl struct {
 	XMLName   struct{}        `xml:"http://schemas.xmlsoap.org/wsdl/ definitions"`
@@ -149,13 +151,30 @@ type BetdaqAttribute struct {
 	CommentMultiLine bool
 }
 
+type Function struct {
+	Name                      string
+	ParameterStruct           string
+	ReturnType                string
+	ReturnStatusContainerName string
+	Service                   string
+}
+
+type Parameter struct {
+	Name string
+	Type string
+}
+
 func main() {
 	wsdl, err := ioutil.ReadFile("api/betdaq-api.wsdl")
 	die(err)
 
-	f, err := os.Create("api/generated_model.go")
+	fModel, err := os.Create("api/generated_model.go")
 	die(err)
-	defer f.Close()
+	defer fModel.Close()
+
+	fApi, err := os.Create("api/generated_api.go")
+	die(err)
+	defer fApi.Close()
 
 	var parsed Wsdl
 	err = xml.Unmarshal(wsdl, &parsed)
@@ -167,10 +186,6 @@ func main() {
 		serviceMap[service.Name] = service
 	}
 
-	sort.Slice(parsed.Types.XsSchema.ComplexTypes, func(i, j int) bool {
-		return parsed.Types.XsSchema.ComplexTypes[i].Name < parsed.Types.XsSchema.ComplexTypes[j].Name
-	})
-
 	for _, p := range parsed.PortTypes {
 		fmt.Println(p.Name)
 		for _, o := range p.Operations {
@@ -181,22 +196,37 @@ func main() {
 
 			fmt.Println("    ", o.Input.Message)
 			inputMessage := getMessage(parsed, o.Input.Message)
-			for _, part := range inputMessage.Parts {
-				fmt.Println("      ", part.Name, part.Element)
-				buildStructFromElementByName(parsed, part.Element)
+			if len(inputMessage.Parts) > 1 {
+				panic("I can't handle multiple input parts")
 			}
+			inputPart := inputMessage.Parts[0]
+			fmt.Println("      ", inputPart.Name, inputPart.Element)
+			buildStructFromElementByName(parsed, inputPart.Element)
 
 			fmt.Println("    ", o.Output.Message)
 			outputMessage := getMessage(parsed, o.Output.Message)
-			for _, part := range outputMessage.Parts {
-				fmt.Println("      ", part.Name, part.Element)
-				buildStructFromElementByName(parsed, part.Element)
+			if len(outputMessage.Parts) > 1 {
+				panic("I can't handle multiple output parts")
 			}
+			outputPart := outputMessage.Parts[0]
+			fmt.Println("      ", outputPart.Name, outputPart.Element)
+			buildStructFromElementByName(parsed, outputPart.Element)
+
+			buildFunction(parsed, o.Name, inputPart.Element, outputPart.Element, p.Name)
+
 			fmt.Println()
 		}
 	}
 
-	err = codeTemplate.Execute(f, struct {
+	sort.Slice(betdaqStructs, func(i, j int) bool {
+		return betdaqStructs[i].Name < betdaqStructs[j].Name
+	})
+
+	sort.Slice(functions, func(i, j int) bool {
+		return functions[i].Name < functions[j].Name
+	})
+
+	err = modelTemplate.Execute(fModel, struct {
 		Timestamp     time.Time
 		ServiceMap    map[string]*WsdlService
 		BetdaqStructs []*BetdaqStruct
@@ -204,6 +234,15 @@ func main() {
 		Timestamp:     time.Now(),
 		ServiceMap:    serviceMap,
 		BetdaqStructs: betdaqStructs,
+	})
+	die(err)
+
+	err = apiTemplate.Execute(fApi, struct {
+		Timestamp time.Time
+		Functions []*Function
+	}{
+		Timestamp: time.Now(),
+		Functions: functions,
 	})
 	die(err)
 }
@@ -245,11 +284,12 @@ func buildStructFromElementByName(parsed Wsdl, name string) {
 		}
 		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 	}
-	betdaqAttributes = append(betdaqAttributes, &BetdaqAttribute{
+	namespaceAttribute := &BetdaqAttribute{
 		Name: "XMLName",
 		Type: "struct{}",
 		Xml:  " `xml:\"http://www.GlobalBettingExchange.com/ExternalAPI/ " + name + "\"`",
-	})
+	}
+	betdaqAttributes = append([]*BetdaqAttribute{namespaceAttribute}, betdaqAttributes...)
 
 	betdaqStruct := BetdaqStruct{
 		Name:       name,
@@ -267,7 +307,7 @@ func buildStructFromElement(parsed Wsdl, name string, element XsElement) {
 	for _, el := range element.ComplexType.XsSequence.XsElements {
 		newName := mapType(el.Type)
 		if newName == "" {
-			newName = name + "_" + el.Name
+			newName = name + el.Name
 			buildStructFromElement(parsed, newName, *el)
 		}
 
@@ -351,7 +391,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		for _, el := range typ.XsSequence.XsElements {
 			var attrType = mapType(el.Type)
 			if attrType == "" {
-				attrType = name + "_" + el.Name
+				attrType = name + el.Name
 				buildStructFromElement(parsed, attrType, *el)
 			}
 
@@ -370,7 +410,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		for _, el := range typ.XsComplexContent.XsExtension.XsSequence.XsElements {
 			var attrType = mapType(el.Type)
 			if attrType == "" {
-				attrType = name + "_" + el.Name
+				attrType = name + el.Name
 				buildStructFromElement(parsed, attrType, *el)
 			}
 
@@ -433,4 +473,18 @@ func getComplexType(parsed Wsdl, name string) (*XsComplexType, bool) {
 
 func capitalize(s string) string {
 	return strings.Title(s)
+}
+
+func buildFunction(parsed Wsdl, name string, inputElement string, outputElement string, service string) {
+	element := getElement(parsed, outputElement)
+	innerElementName := element.ComplexType.XsSequence.XsElements[0].Name
+
+	function := Function{
+		Name:                      name,
+		ParameterStruct:           inputElement,
+		ReturnType:                outputElement,
+		ReturnStatusContainerName: innerElementName,
+		Service:                   service,
+	}
+	functions = append(functions, &function)
 }
