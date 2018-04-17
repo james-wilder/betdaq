@@ -53,6 +53,7 @@ type XsComplexType struct {
 	XsAttributes     []*XsAttribute   `xml:"http://www.w3.org/2001/XMLSchema attribute"`
 	XsSequence       XsSequence       `xml:"http://www.w3.org/2001/XMLSchema sequence"`
 	Name             string           `xml:"name,attr"`
+	XsAnnotation     XsAnnotation     `xml:"http://www.w3.org/2001/XMLSchema annotation"`
 }
 
 type XsComplexContent struct {
@@ -117,7 +118,7 @@ type WsdlOperation struct {
 	Name            string     `xml:"name,attr"`
 	Input           WsdlInput  `xml:"http://schemas.xmlsoap.org/wsdl/ input"`
 	Output          WsdlOutput `xml:"http://schemas.xmlsoap.org/wsdl/ output"`
-	XsDocumentation string     `xml:"http://www.w3.org/2001/XMLSchema documentation"`
+	XsDocumentation string     `xml:"http://schemas.xmlsoap.org/wsdl/ documentation"`
 }
 
 type WsdlInput struct {
@@ -139,8 +140,9 @@ type WsdlPart struct {
 }
 
 type BetdaqStruct struct {
-	Name       string
-	Attributes []*BetdaqAttribute
+	Name          string
+	Attributes    []*BetdaqAttribute
+	Documentation string
 }
 
 type BetdaqAttribute struct {
@@ -157,6 +159,7 @@ type Function struct {
 	ReturnType                string
 	ReturnStatusContainerName string
 	Service                   string
+	Documentation             string
 }
 
 type Parameter struct {
@@ -212,7 +215,7 @@ func main() {
 			fmt.Println("      ", outputPart.Name, outputPart.Element)
 			buildStructFromElementByName(parsed, outputPart.Element)
 
-			buildFunction(parsed, o.Name, inputPart.Element, outputPart.Element, p.Name)
+			buildFunction(parsed, o.Name, inputPart.Element, outputPart.Element, p.Name, o.XsDocumentation)
 
 			fmt.Println()
 		}
@@ -429,8 +432,9 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 	}
 
 	betdaqStruct := BetdaqStruct{
-		Name:       name,
-		Attributes: betdaqAttributes,
+		Name:          name,
+		Attributes:    betdaqAttributes,
+		Documentation: typ.XsAnnotation.XsDocumentation,
 	}
 	betdaqStructs = append(betdaqStructs, &betdaqStruct)
 }
@@ -475,7 +479,7 @@ func capitalize(s string) string {
 	return strings.Title(s)
 }
 
-func buildFunction(parsed Wsdl, name string, inputElement string, outputElement string, service string) {
+func buildFunction(parsed Wsdl, name string, inputElement string, outputElement string, service string, doc string) {
 	element := getElement(parsed, outputElement)
 	innerElementName := element.ComplexType.XsSequence.XsElements[0].Name
 
@@ -485,6 +489,7 @@ func buildFunction(parsed Wsdl, name string, inputElement string, outputElement 
 		ReturnType:                outputElement,
 		ReturnStatusContainerName: innerElementName,
 		Service:                   service,
+		Documentation:             doc,
 	}
 	functions = append(functions, &function)
 }

@@ -30,6 +30,7 @@ func NewBetdaqClient(username string, password string) *BetdaqClient {
 }
 
 {{range .Functions}}
+// {{.Name}} - {{.Documentation}}
 func (c *BetdaqClient) Call{{ .Name }} (request {{.ParameterStruct}}) (*{{ .ReturnType }}, error) {
 	fmt.Println("{{.Name}}")
 

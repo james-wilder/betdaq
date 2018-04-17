@@ -4,6 +4,7 @@
 package api
 
 {{range .BetdaqStructs }}
+// {{.Name}} - {{.Documentation}}
 type {{ .Name }} struct {
 {{range .Attributes}}
     {{- if .Comment}}
