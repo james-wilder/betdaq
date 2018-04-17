@@ -13,8 +13,8 @@ Using code generation to generate the structs needed from the WSDL file and the 
 packages but none worked so I rolled my own that is just about enough for the task.
 
 TODO:
-any other documentation for the structs?
-get rid of Call... prefix on API methods by changing all the struct names to not clash? Or move package?
-pull out acceptable values for parameters into enum type
-change package name to betdaq
-simplify method calls for no/few parameters? (eg GetOddsLadder())
+* any other documentation for the structs?
+* get rid of Call... prefix on API methods by changing all the struct names to not clash? Or move package?
+* pull out acceptable values for parameters into enum type
+* change package name to betdaq
+* simplify method calls for no/few parameters? (eg GetOddsLadder())
