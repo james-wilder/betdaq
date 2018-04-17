@@ -2,33 +2,35 @@ package main
 
 import (
 	"fmt"
-	"github.com/james-wilder/betdaq/api"
-	"github.com/james-wilder/betdaq/config"
 	"log"
+
+	"github.com/james-wilder/betdaq/client"
+	"github.com/james-wilder/betdaq/config"
+	"github.com/james-wilder/betdaq/model"
 )
 
 var configFilename = "./config.json"
 
 func main() {
-	config, err := config.ReadConfig(configFilename)
+	conf, err := config.ReadConfig(configFilename)
 	if err != nil {
 		log.Fatal(err)
 		panic("Couldn't load config file" + configFilename)
 	}
 
-	client := api.NewBetdaqClient(config.Username, config.Password)
+	client := betdaq.NewClient(conf.Username, conf.Password)
 
-	//testGetOddsLadder(client)
+	testGetOddsLadder(client)
 	//testGetAccountBalances(client)
 	//testGetTopLevelEvents(client)
 	//testGetEventSubTreeNoSelections(client, 100004) // Horse Racing
 	//testGetMarketInformation(client, 12208599)
-	testGetPrices(client, 12208599)
+	//testGetPrices(client, 12208599)
 }
 
-func testGetOddsLadder(client *api.BetdaqClient) {
-	getLadderResponse, err := client.CallGetOddsLadder(api.GetOddsLadder{
-		GetOddsLadderRequest: api.GetOddsLadderRequest{
+func testGetOddsLadder(c *betdaq.BetdaqClient) {
+	getLadderResponse, err := c.GetOddsLadder(model.GetOddsLadder{
+		GetOddsLadderRequest: model.GetOddsLadderRequest{
 			PriceFormat: 1,
 		},
 	})
@@ -41,8 +43,8 @@ func testGetOddsLadder(client *api.BetdaqClient) {
 	}
 }
 
-func testGetAccountBalances(client *api.BetdaqClient) {
-	getAccountBalancesResponse, err := client.CallGetAccountBalances(api.GetAccountBalances{})
+func testGetAccountBalances(c *betdaq.BetdaqClient) {
+	getAccountBalancesResponse, err := c.GetAccountBalances(model.GetAccountBalances{})
 	if err != nil {
 		log.Fatal(err)
 		panic("Couldn't get the account balances")
@@ -51,8 +53,8 @@ func testGetAccountBalances(client *api.BetdaqClient) {
 	fmt.Println(getAccountBalancesResponse.GetAccountBalancesResult.AvailableFunds)
 }
 
-func testGetTopLevelEvents(client *api.BetdaqClient) {
-	getTopLevelEvents, err := client.CallListTopLevelEvents(api.ListTopLevelEvents{})
+func testGetTopLevelEvents(c *betdaq.BetdaqClient) {
+	getTopLevelEvents, err := c.ListTopLevelEvents(model.ListTopLevelEvents{})
 	if err != nil {
 		log.Fatal(err)
 		panic("Couldn't get the top level events")
@@ -61,7 +63,7 @@ func testGetTopLevelEvents(client *api.BetdaqClient) {
 	traverseEvents(getTopLevelEvents.ListTopLevelEventsResult.EventClassifiers, "")
 }
 
-func traverseEvents(eventClassifiers []api.EventClassifierType, indent string) {
+func traverseEvents(eventClassifiers []model.EventClassifierType, indent string) {
 	for _, eventClassifier := range eventClassifiers {
 		fmt.Println(indent+"Event", eventClassifier.Id, eventClassifier.Name)
 		for _, marketType := range eventClassifier.Markets {
@@ -72,9 +74,9 @@ func traverseEvents(eventClassifiers []api.EventClassifierType, indent string) {
 	}
 }
 
-func testGetEventSubTreeNoSelections(client *api.BetdaqClient, id int64) {
-	getEventSubTreeNoSelections, err := client.CallGetEventSubTreeNoSelections(api.GetEventSubTreeNoSelections{
-		GetEventSubTreeNoSelectionsRequest: api.GetEventSubTreeNoSelectionsRequest{
+func testGetEventSubTreeNoSelections(c *betdaq.BetdaqClient, id int64) {
+	getEventSubTreeNoSelections, err := c.GetEventSubTreeNoSelections(model.GetEventSubTreeNoSelections{
+		GetEventSubTreeNoSelectionsRequest: model.GetEventSubTreeNoSelectionsRequest{
 			EventClassifierIds: []int64{
 				id,
 			},
@@ -88,9 +90,9 @@ func testGetEventSubTreeNoSelections(client *api.BetdaqClient, id int64) {
 	traverseEvents(getEventSubTreeNoSelections.GetEventSubTreeNoSelectionsResult.EventClassifiers, "")
 }
 
-func testGetMarketInformation(client *api.BetdaqClient, id int64) {
-	getMarketInformation, err := client.CallGetMarketInformation(api.GetMarketInformation{
-		GetMarketInformationRequest: api.GetMarketInformationRequest{
+func testGetMarketInformation(c *betdaq.BetdaqClient, id int64) {
+	getMarketInformation, err := c.GetMarketInformation(model.GetMarketInformation{
+		GetMarketInformationRequest: model.GetMarketInformationRequest{
 			MarketIds: []int64{
 				id,
 			},
@@ -109,9 +111,9 @@ func testGetMarketInformation(client *api.BetdaqClient, id int64) {
 	}
 }
 
-func testGetPrices(client *api.BetdaqClient, id int64) {
-	getPrices, err := client.CallGetPrices(api.GetPrices{
-		GetPricesRequest: api.GetPricesRequest{
+func testGetPrices(c *betdaq.BetdaqClient, id int64) {
+	getPrices, err := c.GetPrices(model.GetPrices{
+		GetPricesRequest: model.GetPricesRequest{
 			MarketIds:                    []int64{id},
 			ThresholdAmount:              "0",
 			NumberAgainstPricesRequired:  3,

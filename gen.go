@@ -1,21 +1,22 @@
 package main
 
+//go:generate go run gen.go
+
 import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
 	"time"
 )
 
-//go:generate go run gen.go
-
-var modelTemplate = template.Must(template.ParseFiles("model_template.txt"))
-var apiTemplate = template.Must(template.ParseFiles("api_template.txt"))
+var modelTemplate = template.Must(template.ParseFiles("templates/model_template.txt"))
+var clientTemplate = template.Must(template.ParseFiles("templates/client_template.txt"))
 
 var attributeTypeMap = map[string]string{
 	"xs:boolean":      "bool",
@@ -30,7 +31,11 @@ var attributeTypeMap = map[string]string{
 
 var betdaqStructs []*BetdaqStruct
 var functions []*Function
+var enumTypes []EnumType
 
+var enumRegex = regexp.MustCompile("^([a-zA-Z]+\\(\\d+\\), )+[a-zA-Z]+\\(\\d+\\)$")
+
+// Wsdl represents the root wsdl:definition element
 type Wsdl struct {
 	XMLName   struct{}        `xml:"http://schemas.xmlsoap.org/wsdl/ definitions"`
 	Types     WsdlTypes       `xml:"http://schemas.xmlsoap.org/wsdl/ types"`
@@ -39,15 +44,18 @@ type Wsdl struct {
 	Messages  []*WsdlMessage  `xml:"http://schemas.xmlsoap.org/wsdl/ message"`
 }
 
+// WsdlTypes represents the wsdl:types XML node
 type WsdlTypes struct {
 	XsSchema XsSchema `xml:"http://www.w3.org/2001/XMLSchema schema"`
 }
 
+// XsSchema represents the xs:schema XML node
 type XsSchema struct {
 	ComplexTypes []*XsComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
 	Elements     []*XsElement     `xml:"http://www.w3.org/2001/XMLSchema element"`
 }
 
+// XsComplexType represents the xs:complexType XML node
 type XsComplexType struct {
 	XsComplexContent XsComplexContent `xml:"http://www.w3.org/2001/XMLSchema complexContent"`
 	XsAttributes     []*XsAttribute   `xml:"http://www.w3.org/2001/XMLSchema attribute"`
@@ -56,16 +64,19 @@ type XsComplexType struct {
 	XsAnnotation     XsAnnotation     `xml:"http://www.w3.org/2001/XMLSchema annotation"`
 }
 
+// XsComplexContent represents the xs:complexContent XML node
 type XsComplexContent struct {
 	XsExtension XsExtension `xml:"http://www.w3.org/2001/XMLSchema extension"`
 }
 
+// XsExtension represents the xs:extension XML node
 type XsExtension struct {
 	XsAttributes []*XsAttribute `xml:"http://www.w3.org/2001/XMLSchema attribute"`
 	Base         string         `xml:"base,attr"`
 	XsSequence   XsSequence     `xml:"http://www.w3.org/2001/XMLSchema sequence"`
 }
 
+// XsAttribute represents the xs:attribute XML node
 type XsAttribute struct {
 	Name         string       `xml:"name,attr"`
 	Type         string       `xml:"type,attr"`
@@ -73,10 +84,17 @@ type XsAttribute struct {
 	XsAnnotation XsAnnotation `xml:"http://www.w3.org/2001/XMLSchema annotation"`
 }
 
+// XsAnnotation represents the xs:annotation XML node
 type XsAnnotation struct {
 	XsDocumentation string `xml:"http://www.w3.org/2001/XMLSchema documentation"`
 }
 
+// XsSequence represents the xs:sequence XML node
+type XsSequence struct {
+	XsElements []*XsElement `xml:"http://www.w3.org/2001/XMLSchema element"`
+}
+
+// XsElement represents the xs:element XML node
 type XsElement struct {
 	Name         string        `xml:"name,attr"`
 	ComplexType  XsComplexType `xml:"http://www.w3.org/2001/XMLSchema complexType"`
@@ -84,36 +102,39 @@ type XsElement struct {
 	XsSimpleType XsSimpleType  `xml:"http://www.w3.org/2001/XMLSchema simpleType"`
 }
 
-type XsSequence struct {
-	XsElements []*XsElement `xml:"http://www.w3.org/2001/XMLSchema element"`
-}
-
+// XsSimpleType represents the xs:simpleType XML node
 type XsSimpleType struct {
 	XsRestriction XsRestriction `xml:"http://www.w3.org/2001/XMLSchema restriction"`
 }
 
+// XsRestriction represents the xs:restriction XML node
 type XsRestriction struct {
 	Base string `xml:"base,attr"`
 }
 
+// WsdlService represents the wsdl:service XML node
 type WsdlService struct {
 	Name string   `xml:"name,attr"`
 	Port WsdlPort `xml:"http://schemas.xmlsoap.org/wsdl/ port"`
 }
 
+// WsdlPort represents the wsdl:port XML node
 type WsdlPort struct {
 	SoapAddress SoapAddress `xml:"http://schemas.xmlsoap.org/wsdl/soap/ address"`
 }
 
+// SoapAddress represents the wsdl:address XML node
 type SoapAddress struct {
 	Location string `xml:"location,attr"`
 }
 
+// WsdlPortType represents the wsdl:portType XML node
 type WsdlPortType struct {
 	Name       string          `xml:"name,attr"`
 	Operations []WsdlOperation `xml:"http://schemas.xmlsoap.org/wsdl/ operation"`
 }
 
+// WsdlOperation represents the wsdl:operation XML node
 type WsdlOperation struct {
 	Name            string     `xml:"name,attr"`
 	Input           WsdlInput  `xml:"http://schemas.xmlsoap.org/wsdl/ input"`
@@ -121,38 +142,45 @@ type WsdlOperation struct {
 	XsDocumentation string     `xml:"http://schemas.xmlsoap.org/wsdl/ documentation"`
 }
 
+// WsdlInput represents the wsdl:input XML node
 type WsdlInput struct {
 	Message string `xml:"message,attr"`
 }
 
+// WsdlOutput represents the wsdl:output XML node
 type WsdlOutput struct {
 	Message string `xml:"message,attr"`
 }
 
+// WsdlMessage represents the wsdl:message XML node
 type WsdlMessage struct {
 	Name  string     `xml:"name,attr"`
 	Parts []WsdlPart `xml:"http://schemas.xmlsoap.org/wsdl/ part"`
 }
 
+// WsdlPart represents the wsdl:part XML node
 type WsdlPart struct {
 	Name    string `xml:"name,attr"`
 	Element string `xml:"element,attr"`
 }
 
+// BetdaqStruct represents a single generated struct from the API
 type BetdaqStruct struct {
 	Name          string
 	Attributes    []*BetdaqAttribute
 	Documentation string
 }
 
+// BetdaqAttribute represents an attribute for a BetdaqStruct
 type BetdaqAttribute struct {
 	Name             string
 	Type             string
-	Xml              string
+	XML              string
 	Comment          string
 	CommentMultiLine bool
 }
 
+// Function represents a single API client func to generate
 type Function struct {
 	Name                      string
 	ParameterStruct           string
@@ -162,22 +190,30 @@ type Function struct {
 	Documentation             string
 }
 
-type Parameter struct {
-	Name string
-	Type string
+// EnumType represnts a type used for an enumeration of values for an API call
+type EnumType struct {
+	Name  string
+	Type  string
+	Enums []Enum
+}
+
+// Enum represents one name/value pair for an EnumType
+type Enum struct {
+	Name  string
+	Value string
 }
 
 func main() {
-	wsdl, err := ioutil.ReadFile("api/betdaq-api.wsdl")
+	wsdl, err := ioutil.ReadFile("wsdl/betdaq-api.wsdl")
 	die(err)
 
-	fModel, err := os.Create("api/generated_model.go")
+	fModel, err := os.Create("model/generated_model.go")
 	die(err)
 	defer fModel.Close()
 
-	fApi, err := os.Create("api/generated_api.go")
+	fClient, err := os.Create("client/generated_client.go")
 	die(err)
-	defer fApi.Close()
+	defer fClient.Close()
 
 	var parsed Wsdl
 	err = xml.Unmarshal(wsdl, &parsed)
@@ -233,14 +269,16 @@ func main() {
 		Timestamp     time.Time
 		ServiceMap    map[string]*WsdlService
 		BetdaqStructs []*BetdaqStruct
+		EnumTypes     []EnumType
 	}{
 		Timestamp:     time.Now(),
 		ServiceMap:    serviceMap,
 		BetdaqStructs: betdaqStructs,
+		EnumTypes:     enumTypes,
 	})
 	die(err)
 
-	err = apiTemplate.Execute(fApi, struct {
+	err = clientTemplate.Execute(fClient, struct {
 		Timestamp time.Time
 		Functions []*Function
 	}{
@@ -283,14 +321,14 @@ func buildStructFromElementByName(parsed Wsdl, name string) {
 		betdaqAttribute := BetdaqAttribute{
 			Name: capitalize(attr.Name),
 			Type: newName,
-			Xml:  "`xml:\"" + attr.Name + "\"`",
+			XML:  "`xml:\"" + attr.Name + "\"`",
 		}
 		betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 	}
 	namespaceAttribute := &BetdaqAttribute{
 		Name: "XMLName",
 		Type: "struct{}",
-		Xml:  " `xml:\"http://www.GlobalBettingExchange.com/ExternalAPI/ " + name + "\"`",
+		XML:  " `xml:\"http://www.GlobalBettingExchange.com/ExternalAPI/ " + name + "\"`",
 	}
 	betdaqAttributes = append([]*BetdaqAttribute{namespaceAttribute}, betdaqAttributes...)
 
@@ -368,24 +406,36 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 
 		// simple attributes
 		for _, attr := range typ.XsAttributes {
+			var attrType = attr.Type
+			enumName, created := createEnumIfNeeded(name, attr)
+			if created {
+				attrType = enumName
+			}
+
 			betdaqAttribute := BetdaqAttribute{
 				Name:             capitalize(attr.Name),
-				Type:             mapType(attr.Type),
+				Type:             mapType(attrType),
 				Comment:          attr.XsAnnotation.XsDocumentation,
 				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
-				Xml:              "`xml:\"" + attr.Name + ",attr\"`",
+				XML:              "`xml:\"" + attr.Name + ",attr\"`",
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
 
 		// extension attributes
 		for _, attr := range typ.XsComplexContent.XsExtension.XsAttributes {
+			var attrType = mapType(attr.Type)
+			enumName, created := createEnumIfNeeded(name, attr)
+			if created {
+				attrType = enumName
+			}
+
 			betdaqAttribute := BetdaqAttribute{
 				Name:             capitalize(attr.Name),
-				Type:             mapType(attr.Type),
+				Type:             attrType,
 				Comment:          attr.XsAnnotation.XsDocumentation,
 				CommentMultiLine: strings.Contains(attr.XsAnnotation.XsDocumentation, "\n"),
-				Xml:              "`xml:\"" + attr.Name + ",attr\"`",
+				XML:              "`xml:\"" + attr.Name + ",attr\"`",
 			}
 			betdaqAttributes = append(betdaqAttributes, &betdaqAttribute)
 		}
@@ -401,7 +451,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 			betdaqAttribute := BetdaqAttribute{
 				Name: capitalize(el.Name),
 				Type: "[]" + attrType,
-				Xml:  "`xml:\"" + el.Name + "\"`",
+				XML:  "`xml:\"" + el.Name + "\"`",
 			}
 			if el.Type != name {
 				buildStructFromComplexType(parsed, el.Type, el.Type)
@@ -420,7 +470,7 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 			betdaqAttribute := BetdaqAttribute{
 				Name: capitalize(el.Name),
 				Type: "[]" + attrType,
-				Xml:  "`xml:\"" + el.Name + "\"`",
+				XML:  "`xml:\"" + el.Name + "\"`",
 			}
 			if el.Type != name {
 				buildStructFromComplexType(parsed, el.Type, el.Type)
@@ -431,12 +481,42 @@ func buildStructFromComplexType(parsed Wsdl, name string, usingDataFromName stri
 		fmt.Println("getComplexType not found", name)
 	}
 
+	fmt.Println(enumTypes)
+
 	betdaqStruct := BetdaqStruct{
 		Name:          name,
 		Attributes:    betdaqAttributes,
 		Documentation: typ.XsAnnotation.XsDocumentation,
 	}
 	betdaqStructs = append(betdaqStructs, &betdaqStruct)
+}
+
+func createEnumIfNeeded(typeName string, attr *XsAttribute) (string, bool) {
+	if enumRegex.MatchString(attr.XsAnnotation.XsDocumentation) {
+		// CancelOrders(1), SuspendOrders(2), SuspendPunter(3)
+		doc := attr.XsAnnotation.XsDocumentation
+		values := strings.Split(doc, ",")
+		var enums []Enum
+		enumName := typeName + "_" + capitalize(attr.Name)
+		for _, value := range values {
+			fmt.Println("***", value)
+			value = strings.Trim(value, " ")
+			valueName := typeName + "_" + capitalize(attr.Name) + "_" + strings.Split(value, "(")[0]
+			value := strings.Split(value, "(")[1]
+			value = strings.Trim(value, ")")
+			enums = append(enums, Enum{
+				Name:  valueName,
+				Value: value,
+			})
+		}
+		enumTypes = append(enumTypes, EnumType{
+			Name:  enumName,
+			Type:  mapType(attr.Type),
+			Enums: enums,
+		})
+		return enumName, true
+	}
+	return "", false
 }
 
 func getBetdaqStructByName(name string) (*BetdaqStruct, bool) {
