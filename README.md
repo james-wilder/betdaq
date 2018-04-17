@@ -13,4 +13,12 @@ Requests implemented:
 * GetOddsLadder
 
 TODO:
+<<<<<<< Updated upstream
 * All of the others :-)
+=======
+* any other documentation for the structs?
+* get rid of Call... prefix on API methods by changing all the struct names to not clash? Or move package?
+* pull out acceptable values for parameters into enum type
+* change package name to betdaq
+* simplify method calls for no/few parameters? (eg GetOddsLadder())
+>>>>>>> Stashed changes
