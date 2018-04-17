@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <soap:Body>
+        <GetPricesResponse xmlns="http://www.GlobalBettingExchange.com/ExternalAPI/">
+            <GetPricesResult>
+                <ReturnStatus Code="0" Description="Success" CallId="af26df13-5f2e-43ca-8de5-129893764283" />
+                <Timestamp>2018-04-16T14:32:49.8372299+00:00</Timestamp>
+                <MarketPrices Id="12196309" Name="Win Market" Type="1" IsPlayMarket="false" Status="2" NumberOfWinningSelections="1" StartTime="2018-04-16T16:10:00.0000000+00:00" WithdrawalSequenceNumber="0" DisplayOrder="1" IsEnabledForMultiples="true" IsInRunningAllowed="true" IsManagedWhenInRunning="true" IsCurrentlyInRunning="false" InRunningDelaySeconds="1" TotalMatchedAmount="697" MatchedMarketForStake="114.96" MatchedMarketAgainstStake="582.69">
+                    <Selections Id="77561827" Name=" 7 Lastin' Memories" Status="2" ResetCount="0" DeductionFactor="20.82" MatchedSelectionForStake="38.29" SelectionOpenInterest="340.32" MarketWinnings="363.68" MarketPositiveWinnings="181.84" MatchedSelectionAgainstStake="141.05" LastMatchedOccurredAt="2018-04-16T10:47:35.3630000+00:00" LastMatchedPrice="4.6" LastMatchedForSideAmount="3.34" LastMatchedAgainstSideAmount="12.02" MatchedForSideAmountAtSamePrice="13.08" MatchedAgainstSideAmountAtSamePrice="47.08" FirstMatchAtSamePriceOccurredAt="2018-04-16T10:47:35.3000000+00:00" NumberOrders="11" NumberPunters="8">
+                        <ForSidePrices Price="4.5" Stake="91.04" />
+                        <ForSidePrices Price="4.4" Stake="22.67" />
+                        <ForSidePrices Price="4.3" Stake="75" />
+                        <AgainstSidePrices Price="5" Stake="73.11" />
+                        <AgainstSidePrices Price="5.1" Stake="10.68" />
+                        <AgainstSidePrices Price="5.2" Stake="75" />
+                    </Selections>
+                    <Selections Id="77561823" Name=" 1 Tetraites Style" Status="2" ResetCount="0" DeductionFactor="22.84" MatchedSelectionForStake="21.14" SelectionOpenInterest="218.94" MarketWinnings="305.54" MarketPositiveWinnings="152.77" MatchedSelectionAgainstStake="93.08" LastMatchedOccurredAt="2018-04-16T11:36:47.6030000+00:00" LastMatchedPrice="5" LastMatchedForSideAmount="0.95" LastMatchedAgainstSideAmount="3.80" MatchedForSideAmountAtSamePrice="4.00" MatchedAgainstSideAmountAtSamePrice="16.00" FirstMatchAtSamePriceOccurredAt="2018-04-16T11:15:08.9100000+00:00" NumberOrders="13" NumberPunters="10">
+                        <ForSidePrices Price="4.7" Stake="42.12" />
+                        <ForSidePrices Price="4.6" Stake="27.77" />
+                        <ForSidePrices Price="4.5" Stake="43.45" />
+                        <AgainstSidePrices Price="5.1" Stake="20.59" />
+                        <AgainstSidePrices Price="5.2" Stake="12.23" />
+                        <AgainstSidePrices Price="5.3" Stake="31.09" />
+                    </Selections>
+                    <Selections Id="77561826" Name=" 6 Make It Happen" Status="2" ResetCount="0" DeductionFactor="17.34" MatchedSelectionForStake="21.53" SelectionOpenInterest="223.14" MarketWinnings="331.19" MarketPositiveWinnings="165.57" MatchedSelectionAgainstStake="90.07" LastMatchedOccurredAt="2018-04-16T14:22:55.3400000+00:00" LastMatchedPrice="5.3" LastMatchedForSideAmount="5.00" LastMatchedAgainstSideAmount="21.52" MatchedForSideAmountAtSamePrice="12.01" MatchedAgainstSideAmountAtSamePrice="51.64" FirstMatchAtSamePriceOccurredAt="2018-04-16T09:42:13.1130000+00:00" NumberOrders="17" NumberPunters="9">
+                        <ForSidePrices Price="5.4" Stake="13.08" />
+                        <ForSidePrices Price="5.3" Stake="1.39" />
+                        <ForSidePrices Price="5.2" Stake="34.32" />
+                        <AgainstSidePrices Price="5.8" Stake="10.86" />
+                        <AgainstSidePrices Price="5.9" Stake="6.69" />
+                        <AgainstSidePrices Price="6" Stake="20.79" />
+                    </Selections>
+                    <Selections Id="77561824" Name=" 2 Divine Port" Status="2" ResetCount="0" DeductionFactor="10.89" MatchedSelectionForStake="25.00" SelectionOpenInterest="410.06" MarketWinnings="470.24" MarketPositiveWinnings="235.14" MatchedSelectionAgainstStake="180.01" LastMatchedOccurredAt="2018-04-16T13:56:01.1700000+00:00" LastMatchedPrice="8.2" LastMatchedForSideAmount="4.78" LastMatchedAgainstSideAmount="34.42" MatchedForSideAmountAtSamePrice="25.00" MatchedAgainstSideAmountAtSamePrice="180.01" FirstMatchAtSamePriceOccurredAt="2018-04-16T13:54:23.7970000+00:00" NumberOrders="7" NumberPunters="4">
+                        <ForSidePrices Price="7.6" Stake="22.68" />
+                        <ForSidePrices Price="7.4" Stake="5.40" />
+                        <ForSidePrices Price="7.2" Stake="32.17" />
+                        <AgainstSidePrices Price="8.4" Stake="31.07" />
+                        <AgainstSidePrices Price="8.6" Stake="3.21" />
+                        <AgainstSidePrices Price="8.8" Stake="12.99" />
+                    </Selections>
+                    <Selections Id="77561829" Name=" 5 Sierra Oscar" Status="2" ResetCount="0" DeductionFactor="7.20" MatchedSelectionForStake="3.00" SelectionOpenInterest="62.98" MarketWinnings="224.72" MarketPositiveWinnings="112.37" MatchedSelectionAgainstStake="28.49" LastMatchedOccurredAt="2018-04-16T12:52:53.0900000+00:00" LastMatchedPrice="10.5" LastMatchedForSideAmount="3.00" LastMatchedAgainstSideAmount="28.49" MatchedForSideAmountAtSamePrice="3.00" MatchedAgainstSideAmountAtSamePrice="28.49" FirstMatchAtSamePriceOccurredAt="2018-04-16T12:52:53.0900000+00:00" NumberOrders="2" NumberPunters="2">
+                        <ForSidePrices Price="9.8" Stake="24.84" />
+                        <ForSidePrices Price="9.6" Stake="14.06" />
+                        <ForSidePrices Price="9.4" Stake="26.19" />
+                        <AgainstSidePrices Price="12.5" Stake="6.50" />
+                        <AgainstSidePrices Price="13" Stake="30.34" />
+                        <AgainstSidePrices Price="14" Stake="35.75" />
+                    </Selections>
+                    <Selections Id="77561828" Name=" 4 Up Helly Aa King" Status="2" ResetCount="0" DeductionFactor="8.51" MatchedSelectionForStake="6.00" SelectionOpenInterest="111.99" MarketWinnings="236.80" MarketPositiveWinnings="118.41" MatchedSelectionAgainstStake="49.99" LastMatchedOccurredAt="2018-04-16T09:44:24.2070000+00:00" LastMatchedPrice="9.6" LastMatchedForSideAmount="2.50" LastMatchedAgainstSideAmount="21.50" MatchedForSideAmountAtSamePrice="2.50" MatchedAgainstSideAmountAtSamePrice="21.50" FirstMatchAtSamePriceOccurredAt="2018-04-16T09:44:24.2070000+00:00" NumberOrders="7" NumberPunters="5">
+                        <ForSidePrices Price="10.5" Stake="43.87" />
+                        <ForSidePrices Price="10" Stake="14.02" />
+                        <ForSidePrices Price="9.8" Stake="55.28" />
+                        <AgainstSidePrices Price="13.5" Stake="4.31" />
+                        <AgainstSidePrices Price="14" Stake="6.98" />
+                        <AgainstSidePrices Price="15" Stake="8.64" />
+                    </Selections>
+                    <Selections Id="77561825" Name=" 3 Boudry" Status="2" ResetCount="0" DeductionFactor="9.56" MatchedSelectionForStake="0" SelectionOpenInterest="0" MarketWinnings="207.98" MarketPositiveWinnings="103.99" MatchedSelectionAgainstStake="0">
+                        <ForSidePrices Price="13.5" Stake="7.93" />
+                        <ForSidePrices Price="13" Stake="34.73" />
+                        <ForSidePrices Price="12" Stake="42.76" />
+                        <AgainstSidePrices Price="16" Stake="2.98" />
+                        <AgainstSidePrices Price="16.5" Stake="2.7" />
+                        <AgainstSidePrices Price="17" Stake="3.56" />
+                    </Selections>
+                    <Selections Id="77561830" Name=" 8 Towerburn" Status="2" ResetCount="0" DeductionFactor="2.84" MatchedSelectionForStake="0" SelectionOpenInterest="0" MarketWinnings="207.98" MarketPositiveWinnings="103.99" MatchedSelectionAgainstStake="0">
+                        <ForSidePrices Price="35" Stake="3.61" />
+                        <ForSidePrices Price="34" Stake="10" />
+                        <ForSidePrices Price="32" Stake="18.54" />
+                        <AgainstSidePrices Price="47" Stake="1.23" />
+                        <AgainstSidePrices Price="48" Stake="7.07" />
+                        <AgainstSidePrices Price="50" Stake="10.49" />
+                    </Selections>
+                </MarketPrices>
+            </GetPricesResult>
+        </GetPricesResponse>
+    </soap:Body>
+</soap:Envelope>
